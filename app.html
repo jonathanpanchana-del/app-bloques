@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Control de Bloques PRO</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+body { font-family: Arial; background:#eef2f5; }
+.container {
+    max-width:500px;
+    margin:auto;
+    background:white;
+    padding:20px;
+    border-radius:10px;
+}
+input, select, button {
+    width:100%;
+    padding:10px;
+    margin:8px 0;
+}
+button {
+    background:#28a745;
+    color:white;
+    font-weight:bold;
+}
+#reader {
+    margin-bottom:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h2>CONTROL BLOQUES</h2>
+
+<div id="reader"></div>
+
+<input type="date" id="fecha" required>
+<input type="text" id="codigo" placeholder="Código QR" required>
+<input type="number" id="peso" placeholder="Peso (Kg)" required>
+<input type="number" id="largo" placeholder="Largo" required>
+
+<select id="calidad" required>
+<option value="">Seleccione Calidad</option>
+<option>SG</option>
+<option>PG</option>
+<option>TG</option>
+<option>HW</option>
+</select>
+
+<select id="madera" required>
+<option value="">Tipo de Madera</option>
+<option>SB</option>
+<option>SDD</option>
+</select>
+
+<input type="file" id="foto" accept="image/*" required>
+
+<button onclick="guardar()">GUARDAR</button>
+
+</div>
+
+<script>
+
+// 🔗 PON TU URL DE APPS SCRIPT AQUÍ
+const URL = "https://script.google.com/macros/s/AKfycbxpbOqFLpGW0iE64udxvEnY5fdSATQEkPfcHkMi3aFMKQ7A4FzKJjwpx3QQ50FkLpg/exec";
+
+// 📷 ESCANEO QR
+function onScanSuccess(txt){
+    document.getElementById("codigo").value = txt;
+}
+
+new Html5Qrcode("reader").start(
+    { facingMode: "environment" },
+    { fps: 10 },
+    onScanSuccess
+);
+
+// 🔎 BUSCAR SI EL CÓDIGO YA EXISTE
+async function buscar(){
+    let codigo = document.getElementById("codigo").value;
+
+    let res = await fetch(URL + "?codigo=" + codigo);
+    let data = await res.json();
+
+    if(data != "NO EXISTE"){
+        alert("❌ Este código ya existe");
+        return true;
+    }
+    return false;
+}
+
+// 💾 GUARDAR DATOS
+async function guardar(){
+
+    // VALIDAR DUPLICADO
+    if(await buscar()){
+        return;
+    }
+
+    const file = document.getElementById("foto").files[0];
+
+    if(!file){
+        alert("Sube una foto");
+        return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = async function(){
+
+        const base64 = reader.result.split(',')[1];
+
+        const data = {
+            fecha: fecha.value,
+            codigo: codigo.value,
+            peso: peso.value,
+            largo: largo.value,
+            calidad: calidad.value,
+            madera: madera.value,
+            foto: base64
+        };
+
+        await fetch(URL, {
+            method:"POST",
+            body: JSON.stringify(data)
+        });
+
+        alert("✅ Guardado correctamente");
+
+        document.querySelector("form")?.reset();
+        location.reload();
+    };
+
+    reader.readAsDataURL(file);
+}
+
+</script>
+
+</body>
+</html>
